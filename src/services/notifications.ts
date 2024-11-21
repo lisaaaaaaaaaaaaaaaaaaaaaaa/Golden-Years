@@ -1,39 +1,32 @@
-import { LocalNotifications } from '@capacitor/local-notifications';
-import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications, LocalNotificationSchema } from '@capacitor/local-notifications';
+import { Pet } from '../types';
 
-export const scheduleReminder = async (title: string, body: string, scheduleDate: Date) => {
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        title,
-        body,
-        id: new Date().getTime(),
-        schedule: { at: scheduleDate },
-        sound: 'beep.wav',
-        attachments: null,
-        actionTypeId: '',
-        extra: null,
-      },
-    ],
+export const scheduleReminders = async (pet: Pet): Promise<void> => {
+  const notifications: LocalNotificationSchema[] = [];
+
+  pet.medications?.forEach(medication => {
+    notifications.push({
+      id: parseInt(medication.id),
+      title: `Medication Reminder for ${pet.name}`,
+      body: `Time to give ${medication.name} - ${medication.dosage}`,
+      schedule: { at: new Date(medication.startDate) },
+      attachments: [],
+      extra: {
+        petId: pet.id,
+        medicationId: medication.id
+      }
+    });
   });
+
+  if (notifications.length > 0) {
+    await LocalNotifications.schedule({ notifications });
+  }
 };
 
-export const initPushNotifications = async () => {
-  const permission = await PushNotifications.requestPermissions();
-  if (permission.receive === 'granted') {
-    await PushNotifications.register();
-  }
+export const scheduleReminder = scheduleReminders; // Alias for backward compatibility
 
-  PushNotifications.addListener('registration', (token) => {
-    // Send token to backend
-    console.log('Push registration success:', token.value);
-  });
-
-  PushNotifications.addListener('registrationError', (error) => {
-    console.error('Error on registration:', error);
-  });
-
-  PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    console.log('Push received:', notification);
+export const cancelReminders = async (notificationIds: number[]): Promise<void> => {
+  await LocalNotifications.cancel({
+    notifications: notificationIds.map(id => ({ id }))
   });
 };

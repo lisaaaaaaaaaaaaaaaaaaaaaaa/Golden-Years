@@ -1,0 +1,3 @@
+const admin = require('firebase-admin');
+
+// ... rest of the file content ...

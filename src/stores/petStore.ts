@@ -1,80 +1,61 @@
-import { create } from 'zustand';
-import { Pet } from '../types';
-import { db } from '../config/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import create from 'zustand';
+import { Pet } from '../types/pets';
+import * as petService from '../services/petService';
 
 interface PetStore {
   pets: Pet[];
-  selectedPet: Pet | null;
   loading: boolean;
   error: string | null;
-  fetchPets: (userId: string) => Promise<void>;
-  addPet: (pet: Omit<Pet, 'id'>) => Promise<void>;
-  updatePet: (pet: Pet) => Promise<void>;
+  fetchPets: () => Promise<void>;
+  addPet: (petData: any, imageUri?: string) => Promise<void>;
+  updatePet: (petId: string, updates: any, newImageUri?: string) => Promise<void>;
   deletePet: (petId: string) => Promise<void>;
-  selectPet: (pet: Pet | null) => void;
 }
 
-export const usePetStore = create<PetStore>((set, get) => ({
+export const usePetStore = create<PetStore>((set) => ({
   pets: [],
-  selectedPet: null,
   loading: false,
   error: null,
 
-  fetchPets: async (userId) => {
-    set({ loading: true, error: null });
+  fetchPets: async () => {
     try {
-      const q = query(collection(db, 'pets'), where('userId', '==', userId));
-      const querySnapshot = await getDocs(q);
-      const pets: Pet[] = [];
-      querySnapshot.forEach((doc) => {
-        pets.push({ id: doc.id, ...doc.data() } as Pet);
-      });
+      set({ loading: true, error: null });
+      const pets = await petService.fetchPets();
       set({ pets, loading: false });
     } catch (error) {
-      set({ error: 'Failed to fetch pets', loading: false });
+      set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false });
     }
   },
 
-  addPet: async (pet) => {
-    set({ loading: true, error: null });
+  addPet: async (petData, imageUri) => {
     try {
-      const docRef = await addDoc(collection(db, 'pets'), pet);
-      const newPet = { ...pet, id: docRef.id } as Pet;
-      set((state) => ({ pets: [...state.pets, newPet], loading: false }));
+      set({ loading: true, error: null });
+      const newPet = await petService.createPetProfile(petData, imageUri);
+      set(state => ({ pets: [...state.pets, newPet], loading: false }));
     } catch (error) {
-      set({ error: 'Failed to add pet', loading: false });
+      set({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   },
 
-  updatePet: async (pet) => {
-    set({ loading: true, error: null });
+  updatePet: async (petId, updates, newImageUri) => {
     try {
-      const petRef = doc(db, 'pets', pet.id);
-      await updateDoc(petRef, pet);
-      set((state) => ({
-        pets: state.pets.map((p) => (p.id === pet.id ? pet : p)),
-        loading: false,
+      const updatedPet = await petService.updatePetProfile(petId, updates, newImageUri);
+      set(state => ({
+        pets: state.pets.map(pet => pet.id === petId ? { ...pet, ...updatedPet } : pet)
       }));
     } catch (error) {
-      set({ error: 'Failed to update pet', loading: false });
+      set({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   },
 
   deletePet: async (petId) => {
-    set({ loading: true, error: null });
     try {
-      await deleteDoc(doc(db, 'pets', petId));
-      set((state) => ({
-        pets: state.pets.filter((p) => p.id !== petId),
-        loading: false,
+      await petService.deletePet(petId);
+      set(state => ({
+        pets: state.pets.filter(pet => pet.id !== petId)
       }));
     } catch (error) {
-      set({ error: 'Failed to delete pet', loading: false });
+      set({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
-  },
-
-  selectPet: (pet) => {
-    set({ selectedPet: pet });
   },
 }));

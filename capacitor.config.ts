@@ -1,18 +1,10 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.goldenyears.petapp',
-  appName: 'Golden Years Pet App',
+  appId: 'com.goldenyears.app',
+  appName: 'Golden Years',
   webDir: 'dist',
-  server: {
-    androidScheme: 'https',
-    cleartext: true,
-  },
-  plugins: {
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
-    },
-  },
+  bundledWebRuntime: false
 };
 
 export default config;

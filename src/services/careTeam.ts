@@ -1,61 +1,100 @@
-import { db } from '../config/firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { CareTeamMember, EmergencyContact } from '../types';
+import { db } from "../config/firebase";
+import { 
+  collection, 
+  doc,
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  getDocs, 
+  query, 
+  where 
+} from "firebase/firestore";
 
-export const addCareTeamMember = async (
-  petId: string,
-  member: Omit<CareTeamMember, 'id'>
-): Promise<CareTeamMember> => {
-  const memberData = {
-    ...member,
-    id: Date.now().toString(),
-  };
+export interface CareTeamMember {
+  id?: string;
+  petId: string;
+  name: string;
+  role: string;
+  specialty?: string;
+  facility?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+}
 
-  await addDoc(collection(db, `pets/${petId}/care-team`), memberData);
-  return memberData;
-};
+export const careTeamService = {
+  addMember: async (member: CareTeamMember) => {
+    try {
+      const docRef = await addDoc(collection(db, "careTeam"), {
+        ...member,
+        createdAt: new Date().toISOString()
+      });
+      return { id: docRef.id, ...member };
+    } catch (error) {
+      console.error("Error adding care team member:", error);
+      throw error;
+    }
+  },
 
-export const updateCareTeamMember = async (
-  petId: string,
-  member: CareTeamMember
-): Promise<void> => {
-  const memberRef = doc(db, `pets/${petId}/care-team`, member.id);
-  await updateDoc(memberRef, member);
-};
+  updateMember: async (id: string, updates: Partial<CareTeamMember>) => {
+    try {
+      const memberRef = doc(db, "careTeam", id);
+      await updateDoc(memberRef, {
+        ...updates,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error updating care team member:", error);
+      throw error;
+    }
+  },
 
-export const deleteCareTeamMember = async (
-  petId: string,
-  memberId: string
-): Promise<void> => {
-  const memberRef = doc(db, `pets/${petId}/care-team`, memberId);
-  await deleteDoc(memberRef);
-};
+  deleteMember: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "careTeam", id));
+    } catch (error) {
+      console.error("Error deleting care team member:", error);
+      throw error;
+    }
+  },
 
-export const addEmergencyContact = async (
-  petId: string,
-  contact: Omit<EmergencyContact, 'id'>
-): Promise<EmergencyContact> => {
-  const contactData = {
-    ...contact,
-    id: Date.now().toString(),
-  };
+  getTeamMembers: async (petId: string) => {
+    try {
+      const q = query(
+        collection(db, "careTeam"),
+        where("petId", "==", petId)
+      );
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error("Error getting care team members:", error);
+      throw error;
+    }
+  },
 
-  await addDoc(collection(db, `pets/${petId}/emergency-contacts`), contactData);
-  return contactData;
-};
+  searchBySpecialty: async (specialty: string, location?: string) => {
+    try {
+      let q = query(
+        collection(db, "careTeam"),
+        where("specialty", "==", specialty)
+      );
 
-export const updateEmergencyContact = async (
-  petId: string,
-  contact: EmergencyContact
-): Promise<void> => {
-  const contactRef = doc(db, `pets/${petId}/emergency-contacts`, contact.id);
-  await updateDoc(contactRef, contact);
-};
+      if (location) {
+        q = query(q, where("location", "==", location));
+      }
 
-export const deleteEmergencyContact = async (
-  petId: string,
-  contactId: string
-): Promise<void> => {
-  const contactRef = doc(db, `pets/${petId}/emergency-contacts`, contactId);
-  await deleteDoc(contactRef);
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error("Error searching care team members:", error);
+      throw error;
+    }
+  }
 };

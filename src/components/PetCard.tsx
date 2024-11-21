@@ -1,45 +1,32 @@
-import { HeartIcon } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
-import { useState } from 'react';
+import React from 'react';
 import { Pet } from '../types';
 
 interface PetCardProps {
   pet: Pet;
+  onClick?: () => void;
 }
 
-export function PetCard({ pet }: PetCardProps) {
-  const [isFavorite, setIsFavorite] = useState(false);
-
+export const PetCard: React.FC<PetCardProps> = ({ pet, onClick }) => {
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <img 
-        src={pet.imageUrl} 
-        alt={pet.name} 
-        className="w-full h-48 object-cover"
-      />
-      <div className="p-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900">{pet.name}</h3>
-          <button 
-            onClick={() => setIsFavorite(!isFavorite)}
-            className="text-red-500 hover:text-red-600"
-          >
-            {isFavorite ? (
-              <HeartSolidIcon className="h-6 w-6" />
-            ) : (
-              <HeartIcon className="h-6 w-6" />
-            )}
-          </button>
-        </div>
-        <p className="text-sm text-gray-600 mt-1">Age: {pet.age} years</p>
-        <p className="text-sm text-gray-600">{pet.breed}</p>
-        <p className="mt-2 text-sm text-gray-700">{pet.description}</p>
-        <div className="mt-4">
-          <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
-            Learn More
-          </button>
+    <div 
+      onClick={onClick}
+      className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg"
+    >
+      <div className="flex items-center space-x-4">
+        {pet.imageUrl && (
+          <img
+            className="w-16 h-16 rounded-full object-cover"
+            src={pet.imageUrl}
+            alt={pet.name}
+          />
+        )}
+        <div>
+          <h3 className="text-lg font-medium">{pet.name}</h3>
+          <p className="text-sm text-gray-500">
+            {pet.breed ? `${pet.species} • ${pet.breed}` : pet.species}
+          </p>
         </div>
       </div>
     </div>
   );
-}
+};

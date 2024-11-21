@@ -1,92 +1,66 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User as FirebaseUser,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from 'firebase/auth';
-import { auth, db } from '../config/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { User } from '../types';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User } from 'firebase/auth';
+import { auth } from '../config/firebase';
+import { handleError } from '../utils/errorHandling';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (userDoc.exists()) {
-          setUser(userDoc.data() as User);
-        }
-      } else {
-        setUser(null);
-      }
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
-  const signUp = async (email: string, password: string, name: string) => {
-    const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
-    const userData: User = {
-      id: firebaseUser.uid,
-      email,
-      name,
-      subscriptionStatus: 'free'
-    };
-    await setDoc(doc(db, 'users', firebaseUser.uid), userData);
-    setUser(userData);
-  };
-
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch (err) {
+      setError(handleError(err));
+      throw err;
+    }
   };
 
-  const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    const { user: firebaseUser } = await signInWithPopup(auth, provider);
-    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-    
-    if (!userDoc.exists()) {
-      const userData: User = {
-        id: firebaseUser.uid,
-        email: firebaseUser.email!,
-        name: firebaseUser.displayName || 'User',
-        subscriptionStatus: 'free'
-      };
-      await setDoc(doc(db, 'users', firebaseUser.uid), userData);
-      setUser(userData);
+  const signUp = async (email: string, password: string) => {
+    try {
+      await auth.createUserWithEmailAndPassword(email, password);
+    } catch (err) {
+      setError(handleError(err));
+      throw err;
     }
   };
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
-    setUser(null);
+    try {
+      await auth.signOut();
+    } catch (err) {
+      setError(handleError(err));
+      throw err;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, loading, error, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

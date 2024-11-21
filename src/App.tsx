@@ -1,70 +1,25 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { SignInForm } from './components/auth/SignInForm';
-import { SignUpForm } from './components/auth/SignUpForm';
-import { useAuth } from './contexts/AuthContext';
-import { Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Navigation } from './components/Navigation';
+import { Loading } from './components/Loading';
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
 const PetProfile = lazy(() => import('./pages/PetProfile'));
-const HealthTracking = lazy(() => import('./pages/HealthTracking'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Settings = lazy(() => import('./pages/Settings'));
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  return user ? <>{children}</> : <Navigate to="/signin" />;
-}
-
-function App() {
+export const App: React.FC = () => {
   return (
     <Router>
-      <AuthProvider>
-        <Suspense fallback={<div>Loading...</div>}>
+      <div className="min-h-screen bg-gray-100">
+        <Navigation />
+        <Suspense fallback={<Loading />}>
           <Routes>
-            <Route path="/signin" element={<SignInForm />} />
-            <Route path="/signup" element={<SignUpForm />} />
-            <Route
-              path="/"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/pet/:id"
-              element={
-                <PrivateRoute>
-                  <PetProfile />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/health/:petId"
-              element={
-                <PrivateRoute>
-                  <HealthTracking />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <PrivateRoute>
-                  <Settings />
-                </PrivateRoute>
-              }
-            />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/pet/:id" element={<PetProfile />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </Suspense>
-      </AuthProvider>
+      </div>
     </Router>
   );
-}
-
-export default App;
+};

@@ -1,31 +1,20 @@
-import { create } from 'zustand';
-import { User } from '../types';
+import { create } from "zustand";
 
-interface SubscriptionStore {
-  showUpgradeModal: boolean;
-  setShowUpgradeModal: (show: boolean) => void;
-  checkFeatureAccess: (feature: 'analytics' | 'multiPet' | 'export' | 'customReminders') => boolean;
+interface Subscription {
+  id: string;
+  type: "basic" | "premium";
+  status: "active" | "cancelled";
+  expiryDate: string;
 }
 
-export const useSubscriptionStore = create<SubscriptionStore>((set, get) => ({
-  showUpgradeModal: false,
-  setShowUpgradeModal: (show) => set({ showUpgradeModal: show }),
-  
-  checkFeatureAccess: (feature) => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}') as User;
-    
-    if (user.subscriptionStatus === 'premium') {
-      return true;
-    }
+interface SubscriptionStore {
+  subscription: Subscription | null;
+  setSubscription: (subscription: Subscription | null) => void;
+  clearSubscription: () => void;
+}
 
-    switch (feature) {
-      case 'analytics':
-      case 'multiPet':
-      case 'export':
-      case 'customReminders':
-        return false;
-      default:
-        return true;
-    }
-  },
+export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
+  subscription: null,
+  setSubscription: (subscription) => set({ subscription }),
+  clearSubscription: () => set({ subscription: null })
 }));
